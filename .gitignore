@@ -1,0 +1,40 @@
+﻿mod sources or inspirations/decompiled/
+mod sources or inspirations/tools/
+
+.gradle/
+build/
+out/
+bin/
+classes/
+.mixin.out/
+run/
+run-data/
+runs/
+run-*/
+logs/
+*.log
+*.hprof
+*.args
+hs_err_pid*
+crash-reports/
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+.metadata/
+.kotlin/
+.DS_Store
+Thumbs.db
+desktop.ini
+curseforge/
+*.zip
+
+Claude outputs/
+
+gradlew
+gradlew.bat
+libs/
