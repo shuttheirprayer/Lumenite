@@ -8,10 +8,12 @@
   "mixins": [
     "BlockStateBaseMixin",
     "ChunkMapAccessor",
+    "DataLayerStorageMapAccessor",
     "LayerLightSectionStorageMixin",
     "LevelLightEngineAccessor",
     "LevelLightEngineMixin",
     "LightEngineAccessor",
+    "SkyDataLayerStorageMapAccessor",
     "ThreadedLevelLightEngineMixin"
   ],
   "client": [
