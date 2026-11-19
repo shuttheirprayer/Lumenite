@@ -16,7 +16,7 @@ public abstract class BlockStateBaseMixin implements LightCell, SkyClear {
 
     @Unique
     private byte lumenite$skyClear;
-
+    // There's a valid reason I am leaving a comment here I swear
     @Override
     public int lumenite$cell() {
         return lumenite$cell;
