@@ -36,6 +36,12 @@ final class LightWindow {
     private final byte[][][] baseData;
     private final byte[][] baseFill;
     final byte[][][] owned;
+    private final boolean[][] zeroed;
+    private final boolean[][] baseOwned;
+    private final boolean[][] escaped;
+    private byte[][] pool = new byte[64][];
+    private int pooled;
+    private static final int MAX_POOL = 1024;
     private final long[][] decreases = new long[16][64];
     private final int[] decreaseCounts = new int[16];
     private final long[][] increases = new long[16][64];
@@ -52,6 +58,49 @@ final class LightWindow {
         this.baseData = new byte[2][9 * sectionCount][];
         this.baseFill = new byte[2][9 * sectionCount];
         this.owned = new byte[2][9 * sectionCount][];
+        this.zeroed = new boolean[2][9 * sectionCount];
+        this.baseOwned = new boolean[2][9 * sectionCount];
+        this.escaped = new boolean[2][9 * sectionCount];
+    }
+
+    private byte[] take() {
+        return pooled > 0 ? pool[--pooled] : new byte[2048];
+    }
+
+    private void give(byte[] array) {
+        if (pooled == pool.length) {
+            if (pooled >= MAX_POOL) {
+                return;
+            }
+            pool = Arrays.copyOf(pool, pooled * 2);
+        }
+        pool[pooled++] = array;
+    }
+
+    static int uniform(byte[] data) {
+        byte first = data[0];
+        if ((first & 15) != (first >> 4 & 15)) {
+            return -1;
+        }
+        for (int i = 1; i < 2048; i++) {
+            if (data[i] != first) {
+                return -1;
+            }
+        }
+        return first & 15;
+    }
+
+    DataLayer publish(int layer, int idx) {
+        byte[] o = owned[layer][idx];
+        if (o == null) {
+            return new DataLayer(0);
+        }
+        int value = uniform(o);
+        if (value >= 0) {
+            return new DataLayer(value);
+        }
+        escaped[layer][idx] = true;
+        return new DataLayer(o);
     }
 
     void attach(Terrain terrain) {
@@ -66,10 +115,23 @@ final class LightWindow {
         Arrays.fill(skyEnabled, false);
         Arrays.fill(storedState, (byte) 0);
         for (int l = BLOCK; l <= SKY; l++) {
+            byte[][] own = owned[l];
+            byte[][] base = baseData[l];
+            for (int i = 0; i < own.length; i++) {
+                if (own[i] != null && !escaped[l][i]) {
+                    give(own[i]);
+                }
+                if (base[i] != null && baseOwned[l][i]) {
+                    give(base[i]);
+                }
+            }
             Arrays.fill(baseLoaded[l], false);
-            Arrays.fill(baseData[l], null);
+            Arrays.fill(base, null);
             Arrays.fill(baseFill[l], (byte) 0);
-            Arrays.fill(owned[l], null);
+            Arrays.fill(own, null);
+            Arrays.fill(zeroed[l], false);
+            Arrays.fill(baseOwned[l], false);
+            Arrays.fill(escaped[l], false);
         }
         Arrays.fill(decreaseCounts, 0);
         Arrays.fill(increaseCounts, 0);
@@ -103,7 +165,7 @@ final class LightWindow {
 
     int changed(int layer, int idx) {
         byte[] o = owned[layer][idx];
-        if (o == null) {
+        if (o == null && !zeroed[layer][idx]) {
             return 0;
         }
         if (!hasBase(layer, idx)) {
@@ -114,7 +176,7 @@ final class LightWindow {
         byte fillByte = (byte) (fill | fill << 4);
         int mask = 0;
         for (int i = 0; i < 2048; i++) {
-            int diff = (o[i] ^ (base == null ? fillByte : base[i])) & 255;
+            int diff = ((o == null ? 0 : o[i]) ^ (base == null ? fillByte : base[i])) & 255;
             if (diff == 0) {
                 continue;
             }
@@ -196,6 +258,9 @@ final class LightWindow {
     private int getAt(int layer, int idx, int cell) {
         byte[] o = owned[layer][idx];
         if (o == null) {
+            if (zeroed[layer][idx]) {
+                return 0;
+            }
             if (hasBase(layer, idx)) {
                 o = baseData[layer][idx];
                 if (o == null) {
@@ -233,17 +298,21 @@ final class LightWindow {
 
     private byte[] materialize(int layer, int idx) {
         byte[] o;
-        if (hasBase(layer, idx)) {
+        if (zeroed[layer][idx]) {
+            o = take();
+            Arrays.fill(o, (byte) 0);
+        } else if (hasBase(layer, idx)) {
             byte[] shared = baseData[layer][idx];
+            o = take();
             if (shared != null) {
-                o = shared.clone();
+                System.arraycopy(shared, 0, o, 0, 2048);
             } else {
-                o = new byte[2048];
                 int fill = baseFill[layer][idx];
                 Arrays.fill(o, (byte) (fill | fill << 4));
             }
         } else {
-            o = new byte[2048];
+            o = take();
+            Arrays.fill(o, (byte) 0);
             int c = idx / sectionCount;
             int s = idx % sectionCount;
             if (layer == SKY && skyEnabled[c]) {
@@ -268,7 +337,10 @@ final class LightWindow {
                             }
                         }
                     }
-                    baseData[layer][idx] = o.clone();
+                    byte[] copy = take();
+                    System.arraycopy(o, 0, copy, 0, 2048);
+                    baseData[layer][idx] = copy;
+                    baseOwned[layer][idx] = true;
                 }
             } else {
                 baseFill[layer][idx] = 0;
@@ -748,7 +820,13 @@ final class LightWindow {
         for (int s = 0; s < sectionCount; s++) {
             int idx = CENTER * sectionCount + s;
             if (stored(idx)) {
-                owned[layer][idx] = new byte[2048];
+                byte[] previous = owned[layer][idx];
+                if (previous != null && !escaped[layer][idx]) {
+                    give(previous);
+                }
+                owned[layer][idx] = null;
+                escaped[layer][idx] = false;
+                zeroed[layer][idx] = true;
             }
         }
     }

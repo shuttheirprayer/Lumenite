@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 final class LightSchedulerCheck {
     static void run() throws InterruptedException {
-        LightScheduler.Pool pool = new LightScheduler.Pool("check", 4);
+        LightScheduler.Pool pool = new LightScheduler.Pool("check", 4, Thread.NORM_PRIORITY);
         LightScheduler[] schedulers = {new LightScheduler(pool), new LightScheduler(pool)};
         ConcurrentHashMap<Long, Boolean>[] running = new ConcurrentHashMap[]{new ConcurrentHashMap<Long, Boolean>(), new ConcurrentHashMap<Long, Boolean>()};
         AtomicInteger overlaps = new AtomicInteger();

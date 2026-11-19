@@ -13,7 +13,9 @@
     "LevelLightEngineAccessor",
     "LevelLightEngineMixin",
     "LightEngineAccessor",
+    "LightPacketMixin",
     "SkyDataLayerStorageMapAccessor",
+    "SkyLightSourcesMixin",
     "ThreadedLevelLightEngineMixin"
   ],
   "client": [

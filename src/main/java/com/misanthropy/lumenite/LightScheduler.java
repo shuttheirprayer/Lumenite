@@ -11,8 +11,8 @@ public final class LightScheduler {
     public static final int DEFAULT_THREADS = Math.max(1, Math.min(Runtime.getRuntime().availableProcessors() / 2, 6));
     public static final int DEFAULT_CLIENT_THREADS = Math.max(1, Math.min(Runtime.getRuntime().availableProcessors() / 4, 2));
 
-    public static final Pool SERVER = new Pool("Lumenite light", Integer.getInteger("lumenite.threads", DEFAULT_THREADS));
-    public static final Pool CLIENT = new Pool("Lumenite client light", Integer.getInteger("lumenite.clientThreads", DEFAULT_CLIENT_THREADS));
+    public static final Pool SERVER = new Pool("Lumenite light", Integer.getInteger("lumenite.threads", DEFAULT_THREADS), Thread.MIN_PRIORITY);
+    public static final Pool CLIENT = new Pool("Lumenite client light", Integer.getInteger("lumenite.clientThreads", DEFAULT_CLIENT_THREADS), Thread.NORM_PRIORITY - 1);
 
     private record Task(LightScheduler owner, long chunk, Runnable body) {
     }
@@ -89,13 +89,15 @@ public final class LightScheduler {
     public static final class Pool {
         private final String name;
         private final int threads;
+        private final int priority;
         private final ArrayList<LightScheduler> queues = new ArrayList<>();
         private int started;
         private int cursor;
 
-        public Pool(String name, int threads) {
+        public Pool(String name, int threads, int priority) {
             this.name = name;
             this.threads = Math.max(1, threads);
+            this.priority = priority;
         }
 
         private synchronized void register(LightScheduler scheduler) {
@@ -103,6 +105,7 @@ public final class LightScheduler {
             while (started < threads) {
                 Thread thread = new Thread(this::work, name + " " + started);
                 thread.setDaemon(true);
+                thread.setPriority(priority);
                 thread.start();
                 started++;
             }

@@ -16,6 +16,7 @@ import net.minecraft.world.level.lighting.LevelLightEngine;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
@@ -62,11 +63,14 @@ public abstract class ClientLevelLightEngineMixin {
         }
     }
 
-    @Inject(method = "queueSectionData", at = @At("HEAD"))
-    private void lumenite$sectionReceived(LightLayer layer, SectionPos pos, DataLayer data, CallbackInfo ci) {
+    @ModifyVariable(method = "queueSectionData", at = @At("HEAD"), argsOnly = true)
+    private DataLayer lumenite$sectionReceived(DataLayer data, LightLayer layer, SectionPos pos) {
         LevelLighting lighting = lumenite$host();
-        if (lighting != null) {
-            lighting.sectionReceived(layer, pos, data);
+        if (lighting == null) {
+            return data;
         }
+        DataLayer compact = com.misanthropy.lumenite.Uniform.compact(data);
+        lighting.sectionReceived(layer, pos, compact);
+        return compact;
     }
 }

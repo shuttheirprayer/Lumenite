@@ -189,7 +189,7 @@ final class LightWindowCheck {
                 int idx = c * SECTIONS + s;
                 for (int layer = 0; layer < 2; layer++) {
                     if (window.stored(idx) && window.changed(layer, idx) != 0) {
-                        world[layer][wc][s] = new DataLayer(window.owned[layer][idx]);
+                        world[layer][wc][s] = window.publish(layer, idx);
                     }
                 }
             }

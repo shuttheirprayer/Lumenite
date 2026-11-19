@@ -230,6 +230,7 @@ public final class LevelLighting {
     }
 
     public void sectionLoaded(LightLayer layer, SectionPos pos, DataLayer data) {
+        data = Uniform.compact(data);
         Long2ObjectOpenHashMap<DataLayer> pending = layer == LightLayer.BLOCK ? pendingBlock : pendingSky;
         long key = pos.asLong();
         synchronized (pending) {
@@ -353,7 +354,7 @@ public final class LevelLighting {
             return;
         }
         long key = SectionPos.asLong(x, y, z);
-        DataLayer dataLayer = new DataLayer(window.owned[windowLayer][idx]);
+        DataLayer dataLayer = window.publish(windowLayer, idx);
         synchronized (pending) {
             pending.put(key, dataLayer);
         }
